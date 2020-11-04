@@ -1,7 +1,10 @@
 package io.github.kimmking.gateway;
 
 
+import cn.hutool.core.collection.CollUtil;
 import io.github.kimmking.gateway.inbound.HttpInboundServer;
+
+import java.util.Arrays;
 
 public class NettyServerApplication {
     
@@ -9,7 +12,7 @@ public class NettyServerApplication {
     public final static String GATEWAY_VERSION = "1.0.0";
     
     public static void main(String[] args) {
-        String proxyServer = System.getProperty("proxyServer","http://localhost:8080");
+        String proxyServer = CollUtil.join(Arrays.asList("http://locallhost:8080","http://locallhost:8081"),",");
         String proxyPort = System.getProperty("proxyPort","8888");
         
           //  http://localhost:8888/api/hello  ==> gateway API

@@ -2,12 +2,16 @@ package io.github.kimmking.gateway.inbound;
 
 import io.github.kimmking.gateway.outbound.httpclient4.HttpOutboundHandler;
 import io.github.kimmking.gateway.outbound.okhttp.HutoolhttpOutboundHandler;
+import io.github.kimmking.gateway.router.HttpEndpointRouter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.util.ReferenceCountUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
 
@@ -28,14 +32,23 @@ public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
-            //logger.info("channelRead流量接口请求开始，时间为{}", startTime);
+
             FullHttpRequest fullRequest = (FullHttpRequest) msg;
-//            String uri = fullRequest.uri();
-//            //logger.info("接收到的请求url为{}", uri);
-//            if (uri.contains("/test")) {
-//                handlerTest(fullRequest, ctx);
-//            }
-    
+
+            String url = fullRequest.uri();
+            HttpEndpointRouter router = new HttpEndpointRouter() {
+                @Override
+                public String route(List<String> endpoints, List<String> proxyServers) {
+                    if (endpoints.stream().anyMatch(e->e.startsWith("/user"))) {
+                        return proxyServers.get(0);
+                    } else    if (endpoints.stream().anyMatch(e->e.startsWith("/order"))) {
+                        return proxyServers.get(1);
+                    }
+                    return null;
+                }
+            };
+            String proxy = router.route(Arrays.asList(url), Arrays.asList(this.proxyServer.split(",").clone()));
+            HutoolhttpOutboundHandler handler = new HutoolhttpOutboundHandler(proxy);
             handler.handle(fullRequest, ctx);
     
         } catch(Exception e) {
