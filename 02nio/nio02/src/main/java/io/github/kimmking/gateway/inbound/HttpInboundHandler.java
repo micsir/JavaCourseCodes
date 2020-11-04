@@ -1,5 +1,6 @@
 package io.github.kimmking.gateway.inbound;
 
+import io.github.kimmking.gateway.filter.TokenFilter;
 import io.github.kimmking.gateway.outbound.httpclient4.HttpOutboundHandler;
 import io.github.kimmking.gateway.outbound.okhttp.HutoolhttpOutboundHandler;
 import io.github.kimmking.gateway.router.HttpEndpointRouter;
@@ -34,19 +35,20 @@ public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
         try {
 
             FullHttpRequest fullRequest = (FullHttpRequest) msg;
+            TokenFilter tokenFilter = new TokenFilter();
+            //过滤
+            tokenFilter.filter(fullRequest,ctx);
 
             String url = fullRequest.uri();
-            HttpEndpointRouter router = new HttpEndpointRouter() {
-                @Override
-                public String route(List<String> endpoints, List<String> proxyServers) {
-                    if (endpoints.stream().anyMatch(e->e.startsWith("/user"))) {
-                        return proxyServers.get(0);
-                    } else    if (endpoints.stream().anyMatch(e->e.startsWith("/order"))) {
-                        return proxyServers.get(1);
-                    }
-                    return null;
+            HttpEndpointRouter router = (endpoints, proxyServers) -> {
+                if (endpoints.stream().anyMatch(e->e.startsWith("/user"))) {
+                    return proxyServers.get(0);
+                } else    if (endpoints.stream().anyMatch(e->e.startsWith("/order"))) {
+                    return proxyServers.get(1);
                 }
+                return null;
             };
+            //路由
             String proxy = router.route(Arrays.asList(url), Arrays.asList(this.proxyServer.split(",").clone()));
             HutoolhttpOutboundHandler handler = new HutoolhttpOutboundHandler(proxy);
             handler.handle(fullRequest, ctx);
